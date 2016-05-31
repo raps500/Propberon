@@ -1,5 +1,6 @@
 MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*)
-  IMPORT Texts, Oberon, ORS, ORB, ORG;
+  (* P2 Port by Ale 30.05.2016 *)
+  IMPORT Base, Console, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
     ORB for definition of data structures and for handling import and export, and
@@ -21,7 +22,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
     modid: ORS.Ident;
     pbsList: PtrBase;   (*list of names of pointer base types*)
     dummy: ORB.Object;
-    W: Texts.Writer;
+    
 
   PROCEDURE Check(s: INTEGER; msg: ARRAY OF CHAR);
   BEGIN
@@ -883,14 +884,14 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
     VAR key: LONGINT;
       obj: ORB.Object;
       impid, impid1: ORS.Ident;
-  BEGIN Texts.WriteString(W, "  compiling "); ORS.Get(sym);
+  BEGIN Console.WriteString('  compiling '); ORS.Get(sym);
     IF sym = ORS.module THEN
       ORS.Get(sym);
-      IF sym = ORS.times THEN version := 0; Texts.Write(W, "*"); ORS.Get(sym) ELSE version := 1 END ;
+      IF sym = ORS.times THEN version := 0; Console.WriteString('*'); ORS.Get(sym) ELSE version := 1 END ;
       ORB.Init; ORB.OpenScope;
       IF sym = ORS.ident THEN
         ORS.CopyId(modid); ORS.Get(sym);
-        Texts.WriteString(W, modid); Texts.Append(Oberon.Log, W.buf)
+        Console.WriteString(modid);
       ELSE ORS.Mark("identifier expected")
       END ;
       Check(ORS.semicolon, "no ;"); level := 0; dc := 0; exno := 1; key := 0;
@@ -926,19 +927,19 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
       IF sym # ORS.period THEN ORS.Mark("period missing") END ;
       IF (ORS.errcnt = 0) & (version # 0) THEN
         ORB.Export(modid, newSF, key);
-        IF newSF THEN Texts.WriteString(W, " new symbol file") END
+        IF newSF THEN Console.WriteString(" new symbol file") END
       END ;
       IF ORS.errcnt = 0 THEN
         ORG.Close(modid, key, exno);
-        Texts.WriteInt(W, ORG.pc, 6); Texts.WriteInt(W, dc, 6); Texts.WriteHex(W, key)
-      ELSE Texts.WriteLn(W); Texts.WriteString(W, "compilation FAILED")
+        Console.WriteInt(ORG.pc); Console.WriteInt(dc); Console.WriteHex(key)
+      ELSE Console.WriteLn(); Console.WriteString("compilation FAILED")
       END ;
-      Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
+      Console.WriteLn();
       ORB.CloseScope; pbsList := NIL
     ELSE ORS.Mark("must start with MODULE")
     END
   END Module;
-
+(*
   PROCEDURE Option(VAR S: Texts.Scanner);
   BEGIN newSF := FALSE;
     IF S.nextCh = "/" THEN
@@ -946,14 +947,16 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
       IF (S.class = Texts.Name) & (S.s[0] = "s") THEN newSF := TRUE END
     END
   END Option;
-
+*)
   PROCEDURE Compile*;
-    VAR beg, end, time: LONGINT;
-      T: Texts.Text;
-      S: Texts.Scanner;
-  BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
-    IF S.class = Texts.Char THEN
-      IF S.c = "@" THEN
+    VAR arg:ARRAY OF CHAR;
+      
+  BEGIN 
+	Base.GetArg(arg, 0);
+	ORS.Init(arg, 0); 
+	Module
+    (*
+	IF S.c = "@" THEN
         Option(S); Oberon.GetSelection(T, beg, end, time);
         IF time >= 0 THEN ORS.Init(T, beg); Module END
       ELSIF S.c = "^" THEN
@@ -977,10 +980,12 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
       END
     END ;
     Oberon.Collect(0)
+	*)
   END Compile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  7.6.2014");
-  Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
+BEGIN 
+  Console.WriteString ('OR Compiler  (original 7.6.2014). P2 Port 30.05.2016!'); 
+  Console.WriteLn
   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
   expression := expression0; Type := Type0; FormalType := FormalType0
 END ORP.

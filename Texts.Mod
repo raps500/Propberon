@@ -1,5 +1,5 @@
 MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014*)
-  IMPORT Files, Fonts;
+  IMPORT Base;
 
   CONST (*scanner symbol classes*)
     Inval* = 0;         (*invalid symbol*)
@@ -18,9 +18,8 @@ MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014*)
 
   TYPE Piece = POINTER TO PieceDesc;
     PieceDesc = RECORD
-      f: Files.File;
+      f: Base.FileHandle;
       off, len: LONGINT;
-      fnt: Fonts.Font;
       col, voff: INTEGER;
       prev, next: Piece
     END;
@@ -38,7 +37,6 @@ MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014*)
 
     Reader* = RECORD
       eot*: BOOLEAN;
-      fnt*: Fonts.Font;
       col*, voff*: INTEGER;
       ref: Piece;
       org: LONGINT;
@@ -65,7 +63,6 @@ MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014*)
 
     Writer* = RECORD
       buf*: Buffer;
-      fnt*: Fonts.Font;
       col*, voff*: INTEGER;
       rider: Files.Rider
     END;     
@@ -80,44 +77,16 @@ MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014*)
     Q.f := TrailerFile; Q.off := -1; Q.len := 1; Q.fnt := NIL; Q.col := 0; Q.voff := 0; RETURN Q
   END Trailer;
 
-  PROCEDURE Load* (VAR R: Files.Rider; T: Text);
-    VAR Q, q, p: Piece;
-      off: LONGINT;
-      N, fno: INTEGER; bt: BYTE;
-      f: Files.File;
-      FName: ARRAY 32 OF CHAR;
-      Dict: ARRAY 32 OF Fonts.Font;
-  BEGIN f := Files.Base(R); N := 1; Q := Trailer(); p := Q;
-    Files.ReadInt(R, off); Files.ReadByte(R, bt); fno := bt;
-    WHILE fno # 0 DO
-      IF fno = N THEN
-        Files.ReadString(R, FName);
-        Dict[N] := Fonts.This(FName); INC(N)
-      END;
-      NEW(q); q.fnt := Dict[fno];
-      Files.ReadByte(R, bt); q.col := bt;
-      Files.ReadByte(R, bt); q.voff := ASR(LSL(bt, -24), 24);
-      Files.ReadInt(R, q.len);
-      Files.ReadByte(R, bt); fno := bt;
-      q.f := f; q.off := off; off := off + q.len;
-      p.next := q; q.prev := p; p := q
-    END;
-    p.next := Q; Q.prev := p;
-    T.trailer := Q; Files.ReadInt(R, T.len); (*Files.Set(R, f, Files.Pos(R) + T.len)*)
-  END Load;
-
   PROCEDURE Open* (T: Text; name: ARRAY OF CHAR);
     VAR f: Files.File; R: Files.Rider; Q, q: Piece;
       tag: CHAR; len: LONGINT;
   BEGIN f := Files.Old(name);
     IF f # NIL THEN
       Files.Set(R, f, 0); Files.Read(R, tag); 
-      IF tag = TextTag THEN Load(R, T)
-      ELSE (*Ascii file*)
-        len := Files.Length(f); Q := Trailer();
-        NEW(q); q.fnt := Fonts.Default; q.col := 1; q.voff := 0; q.f := f; q.off := 0; q.len := len;
-        Q.next := q; q.prev := Q; q.next := Q; Q.prev := q; T.trailer := Q; T.len := len
-      END
+      (*Ascii file*)
+      len := Files.Length(f); Q := Trailer();
+      NEW(q); q.col := 1; q.voff := 0; q.f := f; q.off := 0; q.len := len;
+      Q.next := q; q.prev := Q; q.next := Q; Q.prev := q; T.trailer := Q; T.len := len
     ELSE (*create new text*)
       Q := Trailer(); Q.next := Q; Q.prev := Q; T.trailer := Q; T.len := 0
     END ;
@@ -130,7 +99,6 @@ MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014*)
       off, rlen, pos: LONGINT;
       N, n: INTEGER;
       ch: CHAR;
-      Dict: ARRAY 32, 32 OF CHAR;
   BEGIN pos := Files.Pos(W); Files.WriteInt(W, 0); (*place holder*)
     N := 1; p := T.trailer.next;
     WHILE p # T.trailer DO
@@ -138,11 +106,7 @@ MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014*)
       WHILE (q # T.trailer) & (q.fnt = p.fnt) & (q.col = p.col) & (q.voff = p.voff) DO
         rlen := rlen + q.len; q := q.next
       END;
-      Dict[N] := p.fnt.name;
-      n := 1;
-      WHILE Dict[n] # p.fnt.name DO INC(n) END;
-      Files.WriteByte(W, n);
-      IF n = N THEN Files.WriteString(W, p.fnt.name); INC(N) END;
+
       Files.WriteByte(W, p.col); Files.WriteByte(W, p.voff); Files.WriteInt(W, rlen);
       p := q
     END;
@@ -263,12 +227,12 @@ MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014*)
     T.len := T.len - B.len;
     T.changed := TRUE; T.notify(T, delete, beg, end)
   END Delete;
-
+(*)
   PROCEDURE ChangeLooks* (T: Text; beg, end: LONGINT; sel: SET; fnt: Fonts.Font; col, voff: INTEGER);
     VAR pb, pe, p: Piece; org: LONGINT;
   BEGIN
     IF end > T.len THEN end := T.len END;
-    FindPiece(T, beg, org, p); SplitPiece(p, beg - org, pb);
+    FindPiece(T, beg, org, p); SplitPiece(p, beg - org, pb); 
     FindPiece(T, end, org, p); SplitPiece(p, end - org, pe);
     p := pb;
     REPEAT
@@ -284,7 +248,7 @@ MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014*)
     VAR p: Piece; org: LONGINT;
   BEGIN FindPiece(T, pos, org, p); fnt := p.fnt; col := p.col; voff := p.voff
   END Attributes;
-
+*)
   (* ------------------ Access: Readers ------------------------- *)
 
   PROCEDURE OpenReader* (VAR R: Reader; T: Text; pos: LONGINT);
@@ -400,17 +364,9 @@ MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014*)
 
   PROCEDURE OpenWriter* (VAR W: Writer);
   BEGIN NEW(W.buf);
-    OpenBuf(W.buf); W.fnt := Fonts.Default; W.col := 15; W.voff := 0;
+    OpenBuf(W.buf); W.col := 15; W.voff := 0;
     Files.Set(W.rider, Files.New(""), 0)
   END OpenWriter;
-
-  PROCEDURE SetFont* (VAR W: Writer; fnt: Fonts.Font);
-  BEGIN W.fnt := fnt
-  END SetFont;
-
-  PROCEDURE SetColor* (VAR W: Writer; col: INTEGER);
-  BEGIN W.col := col
-  END SetColor;
 
   PROCEDURE SetOffset* (VAR W: Writer; voff: INTEGER);
   BEGIN W.voff := voff
