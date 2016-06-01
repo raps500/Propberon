@@ -1,4 +1,5 @@
 MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*)
+(*$CONSOLE*)
   (* P2 Port by Ale 30.05.2016 *)
   IMPORT Base, Console, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014.
@@ -949,10 +950,10 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
   END Option;
 *)
   PROCEDURE Compile*;
-    VAR arg:ARRAY OF CHAR;
-      
+    VAR arg: ARRAY 256 OF CHAR;
+        len: INTEGER;
   BEGIN 
-	Base.GetArg(arg, 0);
+	Base.GetArg(arg, len, 0);
 	ORS.Init(arg, 0); 
 	Module
     (*
@@ -985,7 +986,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
 
 BEGIN 
   Console.WriteString ('OR Compiler  (original 7.6.2014). P2 Port 30.05.2016!'); 
-  Console.WriteLn
+  Console.WriteLn;
   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
   expression := expression0; Type := Type0; FormalType := FormalType0
 END ORP.
