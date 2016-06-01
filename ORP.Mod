@@ -953,7 +953,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
     VAR arg: ARRAY 256 OF CHAR;
         len: INTEGER;
   BEGIN 
-	Base.GetArg(arg, len, 0);
+	Base.GetArg(arg, len, 1);
 	ORS.Init(arg, 0); 
 	Module
     (*
@@ -988,5 +988,6 @@ BEGIN
   Console.WriteString ('OR Compiler  (original 7.6.2014). P2 Port 30.05.2016!'); 
   Console.WriteLn;
   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
-  expression := expression0; Type := Type0; FormalType := FormalType0
+  expression := expression0; Type := Type0; FormalType := FormalType0;
+  Compile
 END ORP.

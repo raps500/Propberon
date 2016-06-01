@@ -350,7 +350,7 @@ MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
     flag := Base.Open(R1, filename); (*sum is new key*)
     IF flag THEN Base.Seek(R1, 4); Base.Read_4bytes(R1, oldkey) ELSE oldkey := sum+1 END ;
     IF sum # oldkey THEN
-      IF newSF OR (~flag) THEN
+      IF newSF OR flag THEN
         key := sum; newSF := TRUE; Base.Seek(R, 4); Base.Write_4bytes(R, sum); Base.Close(R)  (*insert checksum*)
       ELSE ORS.Mark("new symbol file inhibited")
       END

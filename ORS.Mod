@@ -266,8 +266,7 @@ MODULE ORS; (* NW 19.9.93 / 1.4.2014  Scanner in Oberon-07*)
   BEGIN 
 	errpos := pos; 
 	errcnt := 0; 
-	flag := Base.Open(R, T);
-	Base.Read(R, ch)
+	IF Base.Open(R, T) THEN Base.Read(R, ch) END
   END Init;
 
   PROCEDURE EnterKW(sym: INTEGER; name: ARRAY OF CHAR);

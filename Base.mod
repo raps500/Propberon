@@ -145,7 +145,10 @@ BEGIN
 			filename, ORD(Kernel32.GENERIC_READ + Kernel32.GENERIC_WRITE),
 			0, NIL, Kernel32.OPEN_EXISTING, 0, 0
 		)
-	ELSE Console.WriteString ('File does not exist!'); Console.WriteLn;
+	ELSE 
+	  Console.WriteString ('File does not exist!'); 
+	  Console.WriteString (filename);
+	  Console.WriteLn;
 	  flag := FALSE
 	END
 	RETURN flag
