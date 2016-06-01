@@ -135,15 +135,20 @@ BEGIN attr := Kernel32.GetFileAttributesW(filename);
 	RETURN attr # ORD(Kernel32.INVALID_FILE_ATTRIBUTES)
 END File_existed;
 	
-PROCEDURE Open* (VAR file: FileHandle; filename: ARRAY OF CHAR);
+PROCEDURE Open* (VAR file: FileHandle; filename: ARRAY OF CHAR) : BOOLEAN;
+    VAR
+	flag : BOOLEAN;
 BEGIN
+	flag := TRUE;
 	IF File_existed(filename) THEN
 		file.handle := Kernel32.CreateFileW(
 			filename, ORD(Kernel32.GENERIC_READ + Kernel32.GENERIC_WRITE),
 			0, NIL, Kernel32.OPEN_EXISTING, 0, 0
 		)
-	ELSE Console.WriteString ('File does not exist!'); Console.WriteLn
+	ELSE Console.WriteString ('File does not exist!'); Console.WriteLn;
+	  flag := FALSE
 	END
+	RETURN flag
 END Open;
 	
 PROCEDURE Rewrite* (VAR file: FileHandle; filename: ARRAY OF CHAR);

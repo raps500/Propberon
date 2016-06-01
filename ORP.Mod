@@ -13,7 +13,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
     END ;
   
   VAR sym: INTEGER;   (*last symbol read*)
-    dc: LONGINT;    (*data counter*)
+    dc: INTEGER;    (*data counter*)
     level, exno, version: INTEGER;
     newSF: BOOLEAN;  (*option flag*)
     expression: PROCEDURE (VAR x: ORG.Item);  (*to avoid forward reference*)
@@ -234,8 +234,8 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
     END
   END ParamList;
 
-  PROCEDURE StandFunc(VAR x: ORG.Item; fct: LONGINT; restyp: ORB.Type);
-    VAR y: ORG.Item; n, npar: LONGINT;
+  PROCEDURE StandFunc(VAR x: ORG.Item; fct: INTEGER; restyp: ORB.Type);
+    VAR y: ORG.Item; n, npar: INTEGER;
   BEGIN Check(ORS.lparen, "no (");
     npar := fct MOD 10; fct := fct DIV 10; expression(x); n := 1;
     WHILE sym = ORS.comma DO ORS.Get(sym); expression(y); INC(n) END ;
@@ -304,7 +304,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
   END set; 
 
   PROCEDURE factor(VAR x: ORG.Item);
-    VAR obj: ORB.Object; rx: LONGINT;
+    VAR obj: ORB.Object; rx: INTEGER;
   BEGIN (*sync*)
     IF (sym < ORS.char) OR (sym > ORS.ident) THEN ORS.Mark("expression expected");
       REPEAT ORS.Get(sym) UNTIL (sym >= ORS.char) & (sym <= ORS.ident)
@@ -417,8 +417,8 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
 
   (* statements *)
 
-  PROCEDURE StandProc(pno: LONGINT);
-    VAR nap, npar: LONGINT; (*nof actual/formal parameters*)
+  PROCEDURE StandProc(pno: INTEGER);
+    VAR nap, npar: INTEGER; (*nof actual/formal parameters*)
       x, y, z: ORG.Item;
   BEGIN Check(ORS.lparen, "no (");
     npar := pno MOD 10; pno := pno DIV 10; expression(x); nap := 1;
@@ -458,7 +458,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
     VAR obj: ORB.Object;
       orgtype: ORB.Type; (*original type of case var*)
       x, y, z, w: ORG.Item;
-      L0, L1, rx: LONGINT;
+      L0, L1, rx: INTEGER;
 
     PROCEDURE TypeCase(obj: ORB.Object; VAR x: ORG.Item);
       VAR typobj: ORB.Object;
@@ -601,7 +601,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
   END IdentList;
   
   PROCEDURE ArrayType(VAR type: ORB.Type);
-    VAR x: ORG.Item; typ: ORB.Type; len: LONGINT;
+    VAR x: ORG.Item; typ: ORB.Type; len: INTEGER;
   BEGIN NEW(typ); typ.form := ORB.NoTyp;
     IF sym = ORS.of THEN (*dynamic array*) len := -1
     ELSE expression(x);
@@ -621,7 +621,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
   PROCEDURE RecordType(VAR type: ORB.Type);
     VAR obj, obj0, new, bot, base: ORB.Object;
       typ, tp: ORB.Type;
-      offset, off, n: LONGINT;
+      offset, off, n: INTEGER;
   BEGIN NEW(typ); typ.form := ORB.NoTyp; typ.base := NIL; typ.mno := -level; typ.nofpar := 0; offset := 0; bot := NIL;
     IF sym = ORS.lparen THEN
       ORS.Get(sym); (*record extension*)
@@ -663,9 +663,9 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
     typ.form := ORB.Record; typ.dsc := bot; typ.size := (offset + 3) DIV 4 * 4; type := typ
   END RecordType;
 
-  PROCEDURE FPSection(VAR adr: LONGINT; VAR nofpar: INTEGER);
+  PROCEDURE FPSection(VAR adr: INTEGER; VAR nofpar: INTEGER);
     VAR obj, first: ORB.Object; tp: ORB.Type;
-      parsize: LONGINT; cl: INTEGER; rdo: BOOLEAN;
+      parsize: INTEGER; cl: INTEGER; rdo: BOOLEAN;
   BEGIN
     IF sym = ORS.var THEN ORS.Get(sym); cl := ORB.Par ELSE cl := ORB.Var END ;
     IdentList(cl, first); FormalType(tp, 0); rdo := FALSE;
@@ -682,8 +682,8 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
     IF adr >= 52 THEN ORS.Mark("too many parameters") END
   END FPSection;
 
-  PROCEDURE ProcedureType(ptype: ORB.Type; VAR parblksize: LONGINT);
-    VAR obj: ORB.Object; size: LONGINT; nofpar: INTEGER;
+  PROCEDURE ProcedureType(ptype: ORB.Type; VAR parblksize: INTEGER);
+    VAR obj: ORB.Object; size: INTEGER; nofpar: INTEGER;
   BEGIN ptype.base := ORB.noType; size := parblksize; nofpar := 0; ptype.dsc := NIL;
     IF sym = ORS.lparen THEN
       ORS.Get(sym);
@@ -706,7 +706,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
   END ProcedureType;
 
   PROCEDURE FormalType0(VAR typ: ORB.Type; dim: INTEGER);
-    VAR obj: ORB.Object; dmy: LONGINT;
+    VAR obj: ORB.Object; dmy: INTEGER;
   BEGIN
     IF sym = ORS.ident THEN
       qualident(obj);
@@ -730,7 +730,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
   END CheckRecLevel;
 
   PROCEDURE Type0(VAR type: ORB.Type);
-    VAR dmy: LONGINT; obj: ORB.Object; ptbase: PtrBase;
+    VAR dmy: INTEGER; obj: ORB.Object; ptbase: PtrBase;
   BEGIN type := ORB.intType; (*sync*)
     IF (sym # ORS.ident) & (sym < ORS.array) THEN ORS.Mark("not a type");
       REPEAT ORS.Get(sym) UNTIL (sym = ORS.ident) OR (sym >= ORS.array)
@@ -769,7 +769,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
     END
   END Type0;
 
-  PROCEDURE Declarations(VAR varsize: LONGINT);
+  PROCEDURE Declarations(VAR varsize: INTEGER);
     VAR obj, first: ORB.Object;
       x: ORG.Item; tp: ORB.Type; ptbase: PtrBase;
       expo: BOOLEAN; id: ORS.Ident;
@@ -839,7 +839,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
       type: ORB.Type;
       procid: ORS.Ident;
       x: ORG.Item;
-      locblksize, parblksize, L: LONGINT;
+      locblksize, parblksize, L: INTEGER;
       int: BOOLEAN;
   BEGIN (* ProcedureDecl *) int := FALSE; ORS.Get(sym);
     IF sym = ORS.times THEN ORS.Get(sym); int := TRUE END ;
@@ -881,7 +881,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
   END ProcedureDecl;
 
   PROCEDURE Module;
-    VAR key: LONGINT;
+    VAR key: INTEGER;
       obj: ORB.Object;
       impid, impid1: ORS.Ident;
   BEGIN Console.WriteString('  compiling '); ORS.Get(sym);

@@ -262,10 +262,11 @@ MODULE ORS; (* NW 19.9.93 / 1.4.2014  Scanner in Oberon-07*)
   END Get;
 
   PROCEDURE Init*(T: ARRAY OF CHAR; pos: INTEGER);
+	  VAR flag: BOOLEAN;
   BEGIN 
 	errpos := pos; 
 	errcnt := 0; 
-	Base.Open(R, T);
+	flag := Base.Open(R, T);
 	Base.Read(R, ch)
   END Init;
 
