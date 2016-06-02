@@ -227,7 +227,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
       Strings.Append(', [', str);
       Strings.Append(rb, str);
       Strings.Append(' + ', str);
-      Strings.Append(so16, str);
+      Strings.Append(so20, str);
       Strings.Append(']', str);
     ELSE (* class is 3, jumps *)
       IF    cond =  0 THEN StrCopy("BMI", str)
