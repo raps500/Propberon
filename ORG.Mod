@@ -1,5 +1,5 @@
 MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
-  IMPORT SYSTEM, Base, ORS, ORB;
+  IMPORT SYSTEM, Base, Strings, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser OSAP; result in array "code".
      Procedure Close writes code-files*)
@@ -49,7 +49,212 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
     code: ARRAY maxCode OF INTEGER;
     data: ARRAY maxTD OF INTEGER;  (*type descriptors*)
     str: ARRAY maxStrx OF CHAR;
+	logFile: Base.FileHandle;
+	logActive: BOOLEAN;
 
+  PROCEDURE LogInit*(filename : ARRAY OF CHAR);
+    VAR fne: ARRAY 260 OF CHAR;
+  BEGIN
+	IF logActive THEN
+	  Base.StrCopy(filename, fne);
+	  Strings.Append('.log', fne);
+	  Base.Rewrite(logFile, fne);
+	  Base.WriteLn(logFile, 'Compiling log');
+	END
+  END LogInit;
+
+  PROCEDURE LogClose*;
+  BEGIN
+	IF logActive THEN
+	  Base.Close(logFile);
+	END
+  END LogClose;
+  
+  PROCEDURE LogS*(s: ARRAY OF CHAR);
+  BEGIN
+	IF logActive THEN
+	  Base.WriteLn(logFile, s)
+	END
+  END LogS;
+
+  PROCEDURE LogSS*(s, s1: ARRAY OF CHAR);
+  BEGIN
+	IF logActive THEN
+	  Base.Write(logFile, s);
+	  Base.Write(logFile, ' ');
+	  Base.WriteLn(logFile, s1)
+	END
+  END LogSS;  
+
+  PROCEDURE LogSI*(s: ARRAY OF CHAR; i: INTEGER);
+    VAR sf: ARRAY 260 OF CHAR;
+  BEGIN
+	IF logActive THEN
+	  Base.Write(logFile, s);
+	  Base.Write(logFile, ' ');
+      Strings.FormatInt(i, sf);
+	  Base.WriteLn(logFile, sf)
+	END
+  END LogSI;
+
+  PROCEDURE LogSH*(s: ARRAY OF CHAR; i: INTEGER);
+    VAR sf: ARRAY 260 OF CHAR;
+  BEGIN
+	IF logActive THEN
+	  Base.Write(logFile, s);
+	  Base.Write(logFile, ' ');
+      Strings.FormatHex(i, sf);
+	  Base.WriteLn(logFile, sf)
+	END
+  END LogSH;
+  
+  PROCEDURE LogSSI*(s, s1: ARRAY OF CHAR; i: INTEGER);
+    VAR sf: ARRAY 260 OF CHAR;
+  BEGIN
+	IF logActive THEN
+	  Base.Write(logFile, s);
+	  Base.Write(logFile, ' ');
+	  Base.Write(logFile, s1);
+	  Base.Write(logFile, ' ');
+      Strings.FormatInt(i, sf);
+	  Base.WriteLn(logFile, sf)
+	END
+  END LogSSI;
+
+  PROCEDURE LogSSH*(s, s1: ARRAY OF CHAR; i: INTEGER);
+    VAR sf: ARRAY 260 OF CHAR;
+  BEGIN
+	IF logActive THEN
+	  Base.Write(logFile, s);
+	  Base.Write(logFile, ' ');
+	  Base.Write(logFile, s1);
+	  Base.Write(logFile, ' ');
+      Strings.FormatHex(i, sf);
+	  Base.WriteLn(logFile, sf)
+	END
+  END LogSSH;
+
+  PROCEDURE LogSHS*(s: ARRAY OF CHAR; i: INTEGER; s1: ARRAY OF CHAR);
+    VAR sf: ARRAY 260 OF CHAR;
+  BEGIN
+	IF logActive THEN
+	  Base.Write(logFile, s);
+	  Base.Write(logFile, ' ');
+      Strings.FormatHex(i, sf);
+	  Base.Write(logFile, sf);
+      Base.Write(logFile, ' ');
+	  Base.WriteLn(logFile, s1);
+
+	END
+  END LogSHS;
+  
+  PROCEDURE StrCopy (src: ARRAY OF CHAR; VAR dst: ARRAY OF CHAR);
+	VAR i: INTEGER;
+  BEGIN
+	i := 0;
+	WHILE (i < LEN(dst) - 1) & (i < LEN(src)) & (src[i] # 0X) DO
+		dst[i] := src[i]; INC(i)
+	END;
+	dst[i] := 0X
+  END StrCopy;
+
+  PROCEDURE Dis*(fop: INTEGER; VAR str: ARRAY OF CHAR);
+    VAR class, op, u, v, cond, ofs20, ofs16, a, b, c: INTEGER;
+    ra, rb, rc : ARRAY 4 OF CHAR;
+    so16, so20 : ARRAY 12 OF CHAR;
+  BEGIN
+    class:= ASR(fop, 30) MOD 4;
+    cond := ASR(fop, 24) MOD 16;
+    ofs20:= fop MOD 1000000H;
+    ofs16:= fop MOD 10000H;
+    v    := ASR(fop, 28) MOD 2;
+    u    := ASR(fop, 29) MOD 2;
+    a    := ASR(fop, 24) MOD 16;
+    b    := ASR(fop, 20) MOD 16;
+    op   := ASR(fop, 16) MOD 16;
+    c    := fop MOD 16;
+    
+    StrCopy('R', ra); Strings.FormatInt(a, str); Strings.Append(str, ra);
+    IF a = 14 THEN StrCopy('SP', ra);
+    ELSIF a = 15 THEN StrCopy('LNK', ra) END;
+    StrCopy('R', rb); Strings.FormatInt(b, str); Strings.Append(str, rb);
+    IF b = 14 THEN StrCopy('SP', rb);
+    ELSIF b = 15 THEN StrCopy('LNK', rb) END;
+    StrCopy('R', rc); Strings.FormatInt(c, str); Strings.Append(str, rc);
+    IF c = 14 THEN StrCopy('SP', rc);
+    ELSIF c = 15 THEN StrCopy('LNK', rc) END;
+    Strings.FormatHex(ofs16, so16);
+    Strings.FormatHex(ofs20, so20);
+    StrCopy("??", str);
+    IF class < 2 THEN
+      IF    op =  0 THEN StrCopy("MOV", str)
+      ELSIF op =  1 THEN StrCopy("LSL", str)
+      ELSIF op =  2 THEN StrCopy('ASR', str)
+      ELSIF op =  3 THEN StrCopy('ROR', str)
+      ELSIF op =  4 THEN StrCopy('AND', str)
+      ELSIF op =  5 THEN StrCopy('ANN', str)
+      ELSIF op =  6 THEN StrCopy('IOR', str)
+      ELSIF op =  7 THEN StrCopy('XOR', str)
+      ELSIF op =  8 THEN StrCopy('ADD', str)
+      ELSIF op =  9 THEN StrCopy('SUB', str)
+      ELSIF op = 10 THEN StrCopy('MUL', str)
+      ELSIF op = 11 THEN StrCopy('DIV', str)
+      ELSIF op = 12 THEN StrCopy('FAD', str)
+      ELSIF op = 13 THEN StrCopy('FSB', str)
+      ELSIF op = 14 THEN StrCopy('FML', str)
+      ELSE StrCopy('FDV', str) END;
+      IF u = 0 THEN Strings.Append('   ', str)
+      ELSE Strings.Append('C  ', str) END;
+      Strings.Append(ra, str);
+      Strings.Append(', ', str);
+      Strings.Append(rb, str);
+      Strings.Append(', ', str);
+      IF class = 0 THEN
+        Strings.Append(rc, str)
+      ELSE
+        IF v = 1 THEN Strings.Append('FFFF', str) END;
+        Strings.Append(so16, str)
+      END
+    ELSIF class = 2 THEN
+      IF u = 0 THEN 
+        IF v = 0 THEN StrCopy('LD    ', str)
+        ELSE StrCopy('LDB   ', str) END
+      ELSE 
+        IF v = 0 THEN StrCopy('ST    ', str)
+        ELSE StrCopy('STB', str) END
+      END;
+      Strings.Append(ra, str);
+      Strings.Append(', [', str);
+      Strings.Append(rb, str);
+      Strings.Append(' + ', str);
+      Strings.Append(so16, str);
+      Strings.Append(']', str);
+    ELSE (* class is 3, jumps *)
+      IF    cond =  0 THEN StrCopy("BMI", str)
+      ELSIF cond =  1 THEN StrCopy('BEQ', str);
+      ELSIF cond =  2 THEN StrCopy('BCS', str);
+      ELSIF cond =  3 THEN StrCopy('BVS', str);
+      ELSIF cond =  4 THEN StrCopy('BLS', str);
+      ELSIF cond =  5 THEN StrCopy('BLT', str);
+      ELSIF cond =  6 THEN StrCopy('BLE', str);
+      ELSIF cond =  7 THEN StrCopy('BRA', str);
+      ELSIF cond =  8 THEN StrCopy('BPL', str);
+      ELSIF cond =  9 THEN StrCopy('BNE', str);
+      ELSIF cond = 10 THEN StrCopy('BCC', str);
+      ELSIF cond = 11 THEN StrCopy('BVC', str);
+      ELSIF cond = 12 THEN StrCopy('BHI', str);
+      ELSIF cond = 13 THEN StrCopy('BGE', str);
+      ELSIF cond = 14 THEN StrCopy('BGT', str);
+      ELSE StrCopy('BRN', str) END;
+      
+      IF v = 0 THEN Strings.Append('   ', str)
+      ELSE Strings.Append('L  ', str) END;
+      IF u = 0 THEN Strings.Append(rc, str)
+      ELSE Strings.Append(so20, str) END
+    END
+  END Dis;
+
+  
   (*instruction assemblers according to formats*)
 
   PROCEDURE Put0(op, a, b, c: INTEGER);
@@ -1030,7 +1235,9 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
   PROCEDURE FindPtrs(VAR R: Base.FileHandle; typ: ORB.Type; adr: INTEGER);
     VAR fld: ORB.Object; i, s: INTEGER;
   BEGIN
-    IF (typ.form = ORB.Pointer) OR (typ.form = ORB.NilTyp) THEN Base.Write_4bytes(R, adr)
+    IF (typ.form = ORB.Pointer) OR (typ.form = ORB.NilTyp) THEN 
+        Base.Write_4bytes(R, adr);
+        LogSH('Pointer', (*typ.typobj.name,*) adr)
     ELSIF typ.form = ORB.Record THEN
       fld := typ.dsc;
       WHILE fld # NIL DO FindPtrs(R, fld.type, fld.val + adr); fld := fld.next END
@@ -1042,6 +1249,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
 
   PROCEDURE Close*(VAR modid: ORS.Ident; key, nofent: INTEGER);
     VAR obj: ORB.Object;
+      dd: ARRAY 80 OF CHAR;
       i, comsize, nofimps, nofptrs, size: INTEGER;
       name: ORS.Ident;
       R: Base.FileHandle;
@@ -1063,32 +1271,50 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
     size := varsize + strx + comsize + (pc + nofimps + nofent + nofptrs + 1)*4;  (*varsize includes type descriptors*)
 
     ORB.MakeFileName(name, modid, ".rsc"); (*write code file*)
-    Base.Rewrite(R, name); Base.Write_string(R, modid); Base.Write_4bytes(R, key); Base.Write_byte(R, version);
+    LogSS('Compiling to', name);
+    
+    Base.Rewrite(R, name); Base.Write_ansi_str(R, modid); Base.Write_4bytes(R, key); Base.Write_byte(R, version);
     Base.Write_4bytes(R, size);
+    LogSI('Total size: ', size);
     obj := ORB.topScope.next;
     WHILE (obj # NIL) & (obj.class = ORB.Mod) DO  (*imports*)
-      IF obj.dsc # ORB.system THEN Base.Write_string(R, obj(ORB.Module).orgname); Base.Write_4bytes(R, obj.val) END ;
+      IF obj.dsc # ORB.system THEN 
+        Base.Write_ansi_str(R, obj(ORB.Module).orgname); 
+        Base.Write_4bytes(R, obj.val);
+        LogSSH('Import', obj(ORB.Module).orgname, obj.val)
+      END ;
       obj := obj.next
     END ;
-    Base.Write_byte(R, 0);
+    Base.Write_byte(R, 0); (* Padding *)
     Base.Write_4bytes(R, tdx*4);
+    LogSI('Type descriptors: ', tdx);
     i := 0;
     WHILE i < tdx DO Base.Write_4bytes(R, data[i]); INC(i) END ; (*type descriptors*)
     Base.Write_4bytes(R, varsize - tdx*4);  (*data*)
+    LogSI('Data size: ', varsize - tdx*4);
     Base.Write_4bytes(R, strx);
+    LogSI('Strings: ', strx);
     FOR i := 0 TO strx-1 DO Base.Write_byte(R, ORD(str[i])) END ;  (*strings*)
     Base.Write_4bytes(R, pc);  (*code len*)
-    FOR i := 0 TO pc-1 DO Base.Write_4bytes(R, code[i]) END ;  (*program*)
+    LogSI('Code len: ', pc);
+    FOR i := 0 TO pc-1 DO 
+      Base.Write_4bytes(R, code[i]);
+      Dis(code[i], dd);  (*DIsassemble *)
+      LogSHS('Code: ', code[i], dd)
+    END ;  (*program*)
     obj := ORB.topScope.next;
     WHILE obj # NIL DO  (*commands*)
       IF (obj.exno # 0) & (obj.class = ORB.Const) & (obj.type.form = ORB.Proc) &
           (obj.type.nofpar = 0) & (obj.type.base = ORB.noType) THEN
-        Base.Write_string(R, obj.name); Base.Write_4bytes(R, obj.val)
+        Base.Write_ansi_str(R, obj.name); Base.Write_4bytes(R, obj.val);
+        LogSH(obj.name, obj.val)
       END ;
       obj := obj.next
     END ;
     Base.Write_byte(R, 0);
     Base.Write_4bytes(R, nofent); Base.Write_4bytes(R, entry);
+    LogSI('nofent: ', nofent);
+    LogSI('entry: ', entry);
     obj := ORB.topScope.next;
     WHILE obj # NIL DO  (*entries*)
       IF obj.exno # 0 THEN
@@ -1114,5 +1340,13 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
   END Close;
 
 BEGIN
-  relmap[0] := 1; relmap[1] := 9; relmap[2] := 5; relmap[3] := 6; relmap[4] := 14; relmap[5] := 13
+  relmap[0] := 1; relmap[1] := 9; relmap[2] := 5; relmap[3] := 6; relmap[4] := 14; relmap[5] := 13;
+  logActive := TRUE
 END ORG.
+
+(*
+Log:
+
+On the destination file, the code is not aligned. The file is read section by section (check code).
+
+*)

@@ -207,13 +207,20 @@ BEGIN
 	IF (bRes = 0) OR (byteRead # 2) THEN n := -1 ELSE n := buf END
 END Read_2bytes;
 
+PROCEDURE Read_ansi_str* (VAR file: FileHandle; VAR str: ARRAY OF CHAR);
+	VAR i, n: INTEGER;
+BEGIN i := -1; n := 0;
+	REPEAT INC (i); Read_byte (file, n); str[i] := CHR(n)
+	UNTIL n = 0
+END Read_ansi_str;
+
 PROCEDURE Read_string* (VAR file: FileHandle; VAR str: ARRAY OF CHAR);
 	VAR i, n: INTEGER;
 BEGIN i := -1; n := 0;
 	REPEAT INC (i); Read_2bytes (file, n); str[i] := CHR(n)
 	UNTIL n = 0
 END Read_string;
-	
+
 PROCEDURE Read_4bytes* (VAR file: FileHandle; VAR n: INTEGER);
 	VAR bRes: Kernel32.BOOL; buf, byteRead: CARD32;
 BEGIN
@@ -259,8 +266,8 @@ BEGIN i := 0;
 	WHILE (i < LEN(str)) & (str[i] # 0X) DO
 		Write_byte (file, ORD(str[i])); INC (i)
 	END;
-	Write_byte (file, 10);
-	Write_byte (file, 13)
+	Write_byte (file, 13);
+	Write_byte (file, 10)
 END WriteLn;
 
 PROCEDURE WriteString* (VAR file: FileHandle; str: ARRAY OF CHAR);

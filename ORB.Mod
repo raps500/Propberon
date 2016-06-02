@@ -213,13 +213,13 @@ MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
     ELSE MakeFileName(fname, modid1, ".smb"); 
 	  flag := Base.Open(R, fname);
       IF flag THEN
-        Base.Read_4bytes(R, key); Base.Read_4bytes(R, key); Base.Read_string(R, modname);
+        Base.Read_4bytes(R, key); Base.Read_4bytes(R, key); Base.Read_ansi_str(R, modname);
         thismod := ThisModule(modid, modid1, TRUE, key); thismod.rdo := TRUE;
         Read(R, class); (*version key*)
         IF class # versionkey THEN ORS.Mark("wrong version") END ;
         Read(R, class);
         WHILE class # 0 DO
-          NEW(obj); obj.class := class; Base.Read_string(R, obj.name);
+          NEW(obj); obj.class := class; Base.Read_ansi_str(R, obj.name);
           InType(R, thismod, obj.type); obj.lev := -thismod.lev;
           IF class = Typ THEN
             t := obj.type; t.typobj := obj; Read(R, k);  (*fixup bases of previously declared pointer types*)
@@ -282,7 +282,7 @@ MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
         fld := t.dsc;
         WHILE fld # NIL DO  (*fields*)
           IF fld.expo THEN
-            Write(R, Fld); Base.Write_string(R, fld.name); OutType(R, fld.type); Base.Write_4bytes(R, fld.val)
+            Write(R, Fld); Base.Write_ansi_str(R, fld.name); OutType(R, fld.type); Base.Write_4bytes(R, fld.val)
           ELSE FindHiddenPointers(R, fld.type, fld.val)  (*offset*)
           END ;
           fld := fld.next
@@ -293,7 +293,7 @@ MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
       IF (t.mno > 0) & (obj # NIL) THEN  (*re-export, output name*)
         mod := topScope.next;
         WHILE (mod # NIL) & (mod.lev # t.mno) DO mod := mod.next END ;
-        IF mod # NIL THEN Base.Write_string(R, mod.name); Base.Write_4bytes(R, mod.val); Base.Write_string(R, obj.name)
+        IF mod # NIL THEN Base.Write_ansi_str(R, mod.name); Base.Write_4bytes(R, mod.val); Base.Write_ansi_str(R, obj.name)
         ELSE ORS.Mark("re-export not found"); Write(R, 0)
         END
       ELSE Write(R, 0)
@@ -311,11 +311,11 @@ MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
     Base.Rewrite(R, filename); (*Files.Set(R, F, 0);*)
     Base.Write_4bytes(R, 0); (*placeholder*)
     Base.Write_4bytes(R, 0); (*placeholder for key to be inserted at the end*)
-    Base.Write_string(R, modid); Write(R, versionkey);
+    Base.Write(R, modid); Write(R, versionkey);
     obj := topScope.next;
     WHILE obj # NIL DO
       IF obj.expo THEN
-        Write(R, obj.class); Base.Write_string(R, obj.name);
+        Write(R, obj.class); Base.Write(R, obj.name);
         OutType(R, obj.type);
         IF obj.class = Typ THEN
           IF obj.type.form = Record THEN

@@ -886,12 +886,14 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
       obj: ORB.Object;
       impid, impid1: ORS.Ident;
   BEGIN Console.WriteString('  compiling '); ORS.Get(sym);
+    
     IF sym = ORS.module THEN
       ORS.Get(sym);
       IF sym = ORS.times THEN version := 0; Console.WriteString('*'); ORS.Get(sym) ELSE version := 1 END ;
       ORB.Init; ORB.OpenScope;
       IF sym = ORS.ident THEN
         ORS.CopyId(modid); ORS.Get(sym);
+        ORG.LogInit(modid);
         Console.WriteString(modid);
       ELSE ORS.Mark("identifier expected")
       END ;
@@ -935,6 +937,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
         Console.WriteInt(ORG.pc); Console.WriteInt(dc); Console.WriteHex(key)
       ELSE Console.WriteLn(); Console.WriteString("compilation FAILED")
       END ;
+      ORG.LogClose;
       Console.WriteLn();
       ORB.CloseScope; pbsList := NIL
     ELSE ORS.Mark("must start with MODULE")
