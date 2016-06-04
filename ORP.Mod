@@ -885,7 +885,10 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
     VAR key: INTEGER;
       obj: ORB.Object;
       impid, impid1: ORS.Ident;
-  BEGIN Console.WriteString('  compiling '); ORS.Get(sym);
+  BEGIN 
+    Console.WriteString('  compiling '); 
+    
+    ORS.Get(sym);
     
     IF sym = ORS.module THEN
       ORS.Get(sym);
@@ -895,6 +898,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
         ORS.CopyId(modid); ORS.Get(sym);
         ORG.LogInit(modid);
         Console.WriteString(modid);
+        Console.WriteLn;
       ELSE ORS.Mark("identifier expected")
       END ;
       Check(ORS.semicolon, "no ;"); level := 0; dc := 0; exno := 1; key := 0;
@@ -934,7 +938,13 @@ MODULE ORP; (*N. Wirth 1.7.97 / 7.6.2014  Oberon compiler for RISC in Oberon-07*
       END ;
       IF ORS.errcnt = 0 THEN
         ORG.Close(modid, key, exno);
-        Console.WriteInt(ORG.pc); Console.WriteInt(dc); Console.WriteHex(key)
+        Console.WriteString(' PC : ');
+        Console.WriteHex(ORG.pc); 
+        Console.WriteString('H, DC : ');
+        Console.WriteHex(dc); 
+        Console.WriteString('H, Key : ');
+        Console.WriteHex(key);
+        Console.WriteString('H')
       ELSE Console.WriteLn(); Console.WriteString("compilation FAILED")
       END ;
       ORG.LogClose;

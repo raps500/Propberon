@@ -1,5 +1,5 @@
 MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
-  IMPORT Base, ORS;
+  IMPORT Base, Console, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
     NewObj, this, thisimport, thisfield (and OpenScope, CloseScope).
@@ -169,7 +169,7 @@ MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
         Base.Read_4bytes(R, t.size);
         Read(R, class);
         WHILE class # 0 DO  (*fields*)
-          NEW(fld); fld.class := class; Base.Read_string(R, fld.name);
+          NEW(fld); fld.class := class; Base.Read_ansi_str(R, fld.name);
           IF fld.name[0] # 0X THEN fld.expo := TRUE; InType(R, thismod, fld.type) ELSE fld.expo := FALSE; fld.type := nilType END ;
           Base.Read_4bytes(R, fld.val); fld.next := obj; obj := fld; Read(R, class)
         END ;
@@ -183,9 +183,9 @@ MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
         END ;
         t.dsc := obj; t.nofpar := np; t.size := 4
       END ;
-      Base.Read_string(R, modname);
+      Base.Read_ansi_str(R, modname);
       IF modname[0] #  0X THEN  (*re-import*)
-        Base.Read_4bytes(R, key); Base.Read_string(R, name);
+        Base.Read_4bytes(R, key); Base.Read_ansi_str(R, name);
         mod := ThisModule(modname, modname, FALSE, key);
         obj := mod.dsc;  (*search type*)
         WHILE (obj # NIL) & (obj.name # name) DO obj := obj.next END ;
@@ -214,12 +214,19 @@ MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
 	  flag := Base.Open(R, fname);
       IF flag THEN
         Base.Read_4bytes(R, key); Base.Read_4bytes(R, key); Base.Read_ansi_str(R, modname);
+        Console.WriteString('Imported module: ');
+        Console.WriteString(modname);
+        Console.WriteLn;
         thismod := ThisModule(modid, modid1, TRUE, key); thismod.rdo := TRUE;
         Read(R, class); (*version key*)
         IF class # versionkey THEN ORS.Mark("wrong version") END ;
         Read(R, class);
         WHILE class # 0 DO
           NEW(obj); obj.class := class; Base.Read_ansi_str(R, obj.name);
+          Console.WriteString('Imported symbol: ');
+          Console.WriteString(obj.name);
+          Console.WriteLn;
+          
           InType(R, thismod, obj.type); obj.lev := -thismod.lev;
           IF class = Typ THEN
             t := obj.type; t.typobj := obj; Read(R, k);  (*fixup bases of previously declared pointer types*)
@@ -232,6 +239,10 @@ MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
           END ;
           obj.next := thismod.dsc; thismod.dsc := obj; Read(R, class)
         END ;
+        Console.WriteString('Last position on symbol file: ');
+        Console.WriteInt(Base.FilePos(R));
+        Console.WriteLn;
+        Base.Close(R);
       ELSE ORS.Mark("import not available")
       END
     END
@@ -243,6 +254,23 @@ MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
   BEGIN Base.Write_byte(R, x)
   END Write;
 
+  PROCEDURE WriteNum(VAR R: Base.FileHandle; comment:ARRAY OF CHAR; x: INTEGER);
+  BEGIN 
+    Console.WriteString(comment);
+    Console.WriteString(' : ');
+    Console.WriteHex(x);
+    Console.WriteString('H');
+    Console.WriteLn;
+    Base.Write_4bytes(R, x)
+  END WriteNum;
+  
+  PROCEDURE WriteName(VAR R: Base.FileHandle; name:ARRAY OF CHAR);
+  BEGIN
+    Console.WriteString(comment);
+    Console.WriteLn;
+    Base.Write_ansi_str(R, name)
+  END WriteName;
+  
   PROCEDURE OutType(VAR R: Base.FileHandle; t: Type);
     VAR obj, mod, fld: Object;
 
@@ -311,11 +339,11 @@ MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
     Base.Rewrite(R, filename); (*Files.Set(R, F, 0);*)
     Base.Write_4bytes(R, 0); (*placeholder*)
     Base.Write_4bytes(R, 0); (*placeholder for key to be inserted at the end*)
-    Base.Write(R, modid); Write(R, versionkey);
+    WriteName(R, modid); Write(R, versionkey);
     obj := topScope.next;
     WHILE obj # NIL DO
       IF obj.expo THEN
-        Write(R, obj.class); Base.Write(R, obj.name);
+        Write(R, obj.class); WriteName(R, obj.name);
         OutType(R, obj.type);
         IF obj.class = Typ THEN
           IF obj.type.form = Record THEN
@@ -327,14 +355,14 @@ MODULE ORB;   (*NW 25.6.2014   in Oberon-07*)
           END ;
           Write(R, 0)
         ELSIF obj.class = Const THEN
-          IF obj.type.form = Proc THEN Base.Write_4bytes(R, obj.exno)
-          ELSIF obj.type.form = Real THEN Base.Write_4bytes(R, obj.val)
-          ELSE Base.Write_4bytes(R, obj.val)
+          IF obj.type.form = Proc THEN WriteNum(R, 'Const Proc', obj.exno)
+          ELSIF obj.type.form = Real THEN WriteNum(R, 'Const Real', obj.val)
+          ELSE WriteNum(R, 'Const other', obj.val)
           END
         ELSIF obj.class = Var THEN
-          Base.Write_4bytes(R, obj.exno);
+          WriteNum(R, 'Var', obj.exno);
           IF obj.type.form = String THEN
-            Base.Write_4bytes(R, obj.val DIV 10000H); obj.val := obj.val MOD 10000H
+            WriteNum(R, 'Var String', obj.val DIV 10000H); obj.val := obj.val MOD 10000H
           END
         END
       END ;

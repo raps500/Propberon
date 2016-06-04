@@ -227,7 +227,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
       Strings.Append(', [', str);
       Strings.Append(rb, str);
       Strings.Append(' + ', str);
-      Strings.Append(so20, str);
+      Strings.Append(so16, str);
       Strings.Append(']', str);
     ELSE (* class is 3, jumps *)
       IF    cond =  0 THEN StrCopy("BMI", str)
@@ -1314,16 +1314,20 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
     Base.Write_byte(R, 0);
     Base.Write_4bytes(R, nofent); Base.Write_4bytes(R, entry);
     LogSI('nofent: ', nofent);
-    LogSI('entry: ', entry);
+    LogSI('entry point: ', entry);
     obj := ORB.topScope.next;
     WHILE obj # NIL DO  (*entries*)
       IF obj.exno # 0 THEN
         IF (obj.class = ORB.Const) & (obj.type.form = ORB.Proc) OR (obj.class = ORB.Var) THEN
-          Base.Write_4bytes(R, obj.val)
+          Base.Write_4bytes(R, obj.val);
+          LogSH('Proc: ', obj.val)
         ELSIF obj.class = ORB.Typ THEN
-          IF obj.type.form = ORB.Record THEN Base.Write_4bytes(R,  obj.type.len MOD 10000H)
+          IF obj.type.form = ORB.Record THEN 
+            Base.Write_4bytes(R,  obj.type.len MOD 10000H);
+            LogSH('Record: ', obj.type.len MOD 10000H)
           ELSIF (obj.type.form = ORB.Pointer) & ((obj.type.base.typobj = NIL) OR (obj.type.base.typobj.exno = 0)) THEN
-            Base.Write_4bytes(R, obj.type.base.len MOD 10000H)
+            Base.Write_4bytes(R, obj.type.base.len MOD 10000H);
+            LogSH('Pointer: ', obj.type.len MOD 10000H)
           END
         END
       END ;

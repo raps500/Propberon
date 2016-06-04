@@ -1,0 +1,185 @@
+ORP Porting Notes
+
+PO Binary format
+ 
++----------------------------------+---------+------------
+| Section                          |  Size   | Start
++----------------------------------+---------+------------
+| Module_name plus \0              |         | 0
++----------------------------------+---------+------------
+| Key                              |    4    | N
++----------------------------------+---------+------------
+| Version                          |    1    | N+4
++----------------------------------+---------+------------
+| size                             |    4    | N+5
++----------------------------------+---------+------------
+| Import name plus \0              |    I    | N+9
+|  repeated                        |         |
++                                  +---------+------------
+| Address of import                |    4    | N+9+(I)
+|  repeated                        |         |
++----------------------------------+---------+------------
+| Separator \0                     |    1    | N+9+(I+4)*n
++----------------------------------+---------+------------
+| Number of Type descriptors       |    4    | N+9+(I+4)*n+1
++----------------------------------+---------+------------
+| Type descriptor                  |    4    | N+9+(I+4)*n+5 
+|   repeated                       |         |   
++----------------------------------+---------+------------
+| Data size                        |    4    | N+9+(I+4)*n+5+tdx*4  
++----------------------------------+---------+------------
+| Strings size (SS in bytes)       |    4    | N+9+(I+4)*n+5+tdx*4+4  
++----------------------------------+---------+------------
+| Strings                          |   SS    | N+9+(I+4)*n+5+tdx*4+8  
++----------------------------------+---------+------------
+| Code length (CL in words)        |    4    | N+9+(I+4)*n+5+tdx*4+8+SS
++----------------------------------+---------+------------
+| Code                             |   CL*4  | N+9+(I+4)*n+5+tdx*4+8+SS+4   
++----------------------------------+---------+------------
+| Command string  repeated         |   CS    |  N+9+(I+4)*n+5+tdx*4+8+SS+4+CL 
++                                  +---------+------------
+| Command value   repeated         |    4    |  N+9+(I+4)*n+5+tdx*4+8+SS+4+CL+(CS+4)*n
++----------------------------------+---------+------------
+| Separator \0                     |    1    |   
++----------------------------------+---------+------------
+| Number of exported procs (nofent)|    4    |   
++----------------------------------+---------+------------
+| Entry point into code            |    4    |   
++----------------------------------+---------+------------
+| Proc entries if any              |  4*e    |   
++----------------------------------+---------+------------
+| Record entries if any            |  4*r    |   
++----------------------------------+---------+------------
+| Pointer entries if any           |  4*p    |   
++----------------------------------+---------+------------
+| Pointer variables if any         |  4*v    |   
++----------------------------------+---------+------------
+| Marker  (FFFFFFFFH)              |    4    |   
++----------------------------------+---------+------------
+| fixorgP                          |    4    |   
++----------------------------------+---------+------------
+| fixorgD                          |    4    |   
++----------------------------------+---------+------------
+| fixorgT                          |    4    |   
++----------------------------------+---------+------------
+| entry                            |    4    |   
++----------------------------------+---------+------------
+| Marker O                         |    1    |   
++----------------------------------+---------+------------
+
+This binary format should be kept for use with a P2 implementation of PO.
+
+Register usage
+
+R0..R11 as R0..R11 (in COG RAM)
+PTRA as stack pointer
+PTRB as SB
+
+due to the lack of 16 bit range in indexed memory access, a combination of opcodes 
+has to be implemented to achieve the same purpose:
+
+Proc Entry
+
+Code:  4EE9000C SUB   SP, SP, C
+
+                mov _SP, PTRA
+                sub _SP, #12    ' or its augmented version if range too short
+                
+This serves two purposes: if the arguments are outside the range of indexed mode
+the pseudo register _SP can be used instead
+
+Saving the link register is not needed because calla saves already the return address
+to the stack:
+
+Code:  AFE00000 ST    LNK, [SP + 0]
+
+Access to stack variable:
+
+Code:  A0E00008 ST    R0, [SP + 8]
+Code:  80E00004 LD    R0, [SP + 4]
+
+The limited range of the index argument (31 for bytes or 124 for longs)
+means that the stack pointer has to be used indirectly, adding 2 or three
+extra opcodes per access:
+
+                wrlong _R0,PTRA[2]   ' 2 will be scaled because argument is long
+                
+                mov   _TT, _SP
+                add   _TT, #508
+                rdlong _R0,_TT
+
+                mov   _TT, _SP
+                augs  #4096         ' really deep stack
+                add   _TT, #508
+                rdlong _R0,_TT
+
+Byte variables should be kept on lower addresses to use the shortest form.
+
+Opcode changes
+ 
+Some RISC5 opcodes can be directly be replaced by P2 opcodes but
+it has to be seen if the 3 register form is widely used or not, because the
+P2 only provides 2-operands opcodes:
+ 
+ 
+ 
+Code:  40080005 ADD   R0, R0, 5
+ 
+                add  _R0, #5    ' or ist augmented version if the operand is larger
+ 
+ 
+Exiting from a Procedure requires some house-keeping too:
+
+Code:  4EE8000C ADD   SP, SP, C
+Code:  C700000F BRA   LNK
+
+                add   _SP, #12
+                mov   PTRA, _SP
+                add   _SP, #4       ' re-adjust _SP to keep in sync with PTRA after reta
+                reta
+
+And 2 RISC5 opcodes become 4 :(, if variables are used.
+
+Arguments are passed in registers for less stack usage, when they fit:
+
+Code:  40000006 MOV   R0, R0, 6
+Code:  F7FFFFED BRAL  FFFFED
+
+                mov   _R0, #6   ' or its augmented version
+                calla _Proc
+
+Compiling log
+Compiling to Test33.rsc
+Total size:  124
+Type descriptors:  0
+Data size:  8
+Strings:  0
+Code len:  26
+Code:  4EE9000C SUB   SP, SP, C
+Code:  AFE00000 ST    LNK, [SP + 0]
+Code:  A0E00004 ST    R0, [SP + 4]
+Code:  40000050 MOV   R0, R0, 50
+Code:  80000000 LD    R0, [R0 + 0]
+Code:  A0E00008 ST    R0, [SP + 8]
+Code:  80E00004 LD    R0, [SP + 4]
+Code:  40010001 LSL   R0, R0, 1
+Code:  81E00008 LD    R1, [SP + 8]
+Code:  80001 ADD   R0, R0, R1
+Code:  8D00000A LD    R13, [R0 + A]
+Code:  A0D00004 ST    R0, [R13 + 4]
+Code:  8FE00000 LD    LNK, [SP + 0]
+Code:  4EE8000C ADD   SP, SP, C
+Code:  C700000F BRA   LNK
+Code:  4EE90004 SUB   SP, SP, 4
+Code:  AFE00000 ST    LNK, [SP + 0]
+Code:  40000006 MOV   R0, R0, 6
+Code:  F7FFFFED BRAL  FFFFED
+Code:  8D000009 LD    R13, [R0 + 9]
+Code:  80D00004 LD    R0, [R13 + 4]
+Code:  40080005 ADD   R0, R0, 5
+Code:  A0D00000 ST    R0, [R13 + 0]
+Code:  8FE00000 LD    LNK, [SP + 0]
+Code:  4EE80004 ADD   SP, SP, 4
+Code:  C700000F BRA   LNK
+nofent:  1
+entry:  60

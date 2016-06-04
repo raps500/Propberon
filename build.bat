@@ -1,0 +1,9 @@
+@echof off
+..\09_Aya\bin\AyaCompile Strings.mod
+..\09_Aya\bin\AyaCompile Kernel32.mod
+..\09_Aya\bin\AyaCompile Console.mod
+..\09_Aya\bin\AyaCompile Base.mod
+..\09_Aya\bin\AyaCompile ORS.mod
+..\09_Aya\bin\AyaCompile ORB.mod
+..\09_Aya\bin\AyaCompile ORG.mod
+..\09_Aya\bin\AyaCompile ORP.mod
